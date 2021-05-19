@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Iterable
 
 
 def wrap_tuple(x):
@@ -181,6 +182,9 @@ class FunctionBase:
         """
         derivs = cls.backward(ctx, d_output)
         ret = []
+        if not isinstance(derivs, Iterable):
+            derivs = [derivs]
+
         for input, deriv in zip(inputs, derivs):
             if not is_constant(input):
                 ret.append(VariableWithDeriv(input, deriv))
@@ -206,5 +210,13 @@ def backpropagate(final_variable_with_deriv):
        final_variable_with_deriv (:class:`VariableWithDeriv`): The final variable
            and its derivative that we want to propagate backward to the leaves.
     """
-    # TODO: Implement for Task 1.4.
-    raise NotImplementedError("Need to implement for Task 1.4")
+    queue = [final_variable_with_deriv]
+    while len(queue) > 0:
+        vd = queue.pop()
+        var, der = vd.variable, vd.deriv
+
+        if is_leaf(var):
+            var._add_deriv(der)
+            continue
+
+        queue += var.history.backprop_step(der)
